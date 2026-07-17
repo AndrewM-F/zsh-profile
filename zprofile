@@ -47,10 +47,6 @@ if command -v mise &>/dev/null; then
   hash -r  # rehash after PATH changes so shims shadow local tools
 fi
 
-# jEnv (Java environment manager) — kept for Android SDK JDK dependency
-add_to_path "$BREW/opt/jenv/bin"
-eval "$(jenv init -)"
-
 # pnpm (falls under Node/mise; global bin)
 export PNPM_HOME="$HOME/Library/pnpm"
 add_to_path "$PNPM_HOME/bin"
