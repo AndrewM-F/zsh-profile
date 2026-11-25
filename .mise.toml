@@ -1,0 +1,7 @@
+[tools]
+
+# no project-local tool pins; all dev tools are pinned globally in
+# mise/config.toml (symlinked to ~/.config/mise/config.toml)
+
+[settings]
+experimental = true

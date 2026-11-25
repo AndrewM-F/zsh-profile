@@ -188,6 +188,18 @@ alias brewls='brew list'
 alias brewsr='brew search'
 alias brewi='brew install'
 
+# mise (dev runtimes + CLIs). Pins are exact, so --bump is required to move.
+# MISE_MINIMUM_RELEASE_AGE=0 bypasses the 24h release-age gate so "latest"
+# really means latest, matching the last full update.
+alias miseout='mise outdated --bump --global'
+alias misels='mise ls --current'
+alias misedr='mise doctor'
+# check -> upgrade -> doctor (mise prunes replaced versions automatically after its grace period)
+alias miseup='miseout && MISE_MINIMUM_RELEASE_AGE=0 mise upgrade --bump --global && misedr'
+
+# Full machine update: system packages (Homebrew) then dev toolchain (mise).
+alias sysup='brewup && miseup'
+
 # npm
 alias nrs='npm run start'
 alias nrd='npm run dev'
@@ -207,7 +219,7 @@ alias yarnout='yarn outdated'
 # Node environments
 alias node-dev='export NODE_ENV=development'
 alias node-prod='export NODE_ENV=production'
-alias pinnode='node -v > .tool-versions'    # pin current node to mise .tool-versions
+alias pinnode='mise use --path .mise.toml node@$(node -v | sed "s/^v//")'   # pin active node into .mise.toml (repo convention)
 
 # Python
 alias python="python3"
@@ -416,26 +428,35 @@ ssh-add-all() {
 #   8.  TAB COMPLETION & AUTO-SUGGESTIONS
 #-----------------------------------------------------------------------------------------------------------------------
 
-# The following lines have been added by Docker Desktop to enable Docker CLI completions.
-fpath=($HOME/.docker/completions $fpath)
-# End of Docker CLI completions
 
-# Bun completion is registered by compinit from its #compdef header.
-[[ -d "$HOME/.bun" ]] && fpath=("$HOME/.bun" $fpath)
+# Bun completion: static #compdef file from Bun's completion generator.
+# The bun runtime itself is mise-managed; ~/.bun is only a completion source.
+[[ -f "$HOME/.bun/_bun" ]] && fpath=("$HOME/.bun" $fpath)
+
+# Docker CLI completions (registered before compinit, once).
+[[ -d "$HOME/.docker/completions" ]] && fpath=("$HOME/.docker/completions" $fpath)
 
 autoload -Uz compinit
 
-BREW_PREFIX=""
+# Homebrew prefix is a fixed path on Apple Silicon; spawning `brew --prefix`
+# here cost ~0.3s per shell (seconds under system load).
+BREW_PREFIX="/opt/homebrew"
 
-# Load Homebrew Zsh plugins
-if type brew &>/dev/null; then
-    BREW_PREFIX="$(brew --prefix)"
+if [[ -x "$BREW_PREFIX/bin/brew" ]]; then
     # Load Zsh third-party tab completions
     FPATH="$BREW_PREFIX/share/zsh-completions:$FPATH"
 fi
 
 # Initialize completion after all completion directories are registered.
-compinit
+# Run the slow compaudit security scan at most once per day; otherwise reuse the
+# cached .zcompdump (a full compinit took multiple seconds under system load).
+_zcompdump="${ZDOTDIR:-$HOME}/.zcompdump"
+if [[ -n $_zcompdump(#qN.mh+24) ]]; then
+    compinit -C
+else
+    compinit
+fi
+unset _zcompdump
 
 if [[ -n "$BREW_PREFIX" ]]; then
     # Load Zsh syntax highlighting plugin
@@ -506,9 +527,13 @@ re-source() {
 }
 bash-as() { sudo -u "$1" /bin/bash; }
 
-# Terminal auto correction
-if type thefuck &>/dev/null; then
-    eval "$(thefuck --alias --shell=zsh)"
+# Terminal auto correction (lazy: thefuck's Python eval cost ~1s on every shell start)
+if (( $+commands[thefuck] )); then
+    fuck() {
+        unfunction fuck
+        eval "$(thefuck --alias --shell=zsh)"
+        fuck "$@"
+    }
 fi
 alias please='fuck'
 
@@ -520,3 +545,6 @@ weather() {
     fi
     curl -fsSL "http://wttr.in/${location}?lang=en"
 }
+
+# All PATH and environment setup lives in zprofile; completions are registered
+# before the single compinit call in section 8.

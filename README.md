@@ -10,21 +10,28 @@
 
 - [`~/.zshrc`](./zshrc)  \n  Contains functions, aliases, and settings applied to interactive non-login shells.
 
+- [`~/.profile`](./profile)  \n  Minimal POSIX login profile for `/bin/sh` and bash; just cargo's env. zsh does not read it.
+
+- [`~/.config/mise/config.toml`](./mise/config.toml)  \n  Global mise pins for all dev runtimes and CLIs; symlinked from this repo.
+
 ### 🔗 Install as the global configuration
 
-From this repository, link the three Zsh entry points into your home directory:
+From this repository, link the managed files into your home directory:
 
 ```sh
 ln -sfn "$PWD/zshenv" "$HOME/.zshenv"
 ln -sfn "$PWD/zprofile" "$HOME/.zprofile"
 ln -sfn "$PWD/zshrc" "$HOME/.zshrc"
+ln -sfn "$PWD/profile" "$HOME/.profile"
+mkdir -p "$HOME/.config/mise"
+ln -sfn "$PWD/mise/config.toml" "$HOME/.config/mise/config.toml"
 ```
 
 The active machine uses these links, so future changes should be made in this repository rather than in `$HOME`.
 
 ### 🧭 Shared Config Rules
 
-- Put PATH entries, environment exports, and machine-added CLI bootstrap in [`zprofile`](./zprofile).
+- Put all PATH entries, environment exports, and machine-added CLI bootstrap in [`zprofile`](./zprofile) using `add_to_path`; never modify PATH in `zshrc`.
 - Keep prompt logic, aliases, and interactive shell functions in [`zshrc`](./zshrc).
 - Use generic references such as `$HOME`; never commit username-specific absolute paths like `/Users/your-name/...`.
 - Keep machine-specific hosts and usernames as environment variables such as `PI_SSH_TARGET`, and edit shared files directly when needed.
@@ -32,7 +39,7 @@ The active machine uses these links, so future changes should be made in this re
 ### 🔧  Helpful Tools
 
 - [Homebrew](https://brew.sh/) - Package manager for macOS.
-- [mise](https://mise.jdx.dev/) - Unified toolchain manager (Node 24.18.0 / Python 3.11.15 / Rust 1.97.1 pins). Replaces nvm + brew python.
+- [mise](https://mise.jdx.dev/) - Single source of truth for dev runtimes (Java/Node/Python/Bun) and dev CLIs including npm CLIs via its `npm:` backend. Homebrew handles system packages; there are no global npm/bun installs. Pins live in the repo's [`mise/config.toml`](./mise/config.toml), symlinked to `~/.config/mise/config.toml`.
 - [jEnv](https://github.com/jenv/jenv) - Java environment manager
 - [eza](https://github.com/eza-community/eza) - Modern Rust `ls` replacement (replaces colorls)
 - [Dracula Theme](https://draculatheme.com/terminal/) - Dark and beautiful theme capatible with bash
